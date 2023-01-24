@@ -1,5 +1,5 @@
 include .envrc
-
+production_host_ip = '164.92.73.189'
 
 # ==================================================================================== # 
 # HELPERS
@@ -43,6 +43,11 @@ db/migrations/up: confirm
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up
 
+## update/config: connect to the production server
+.PHONY: update/config 
+update/config:
+	rsync -rP --delete ./remote/setup greenlight@${production_host_ip}:~
+	ssh -t greenlight@${production_host_ip} "sudo bash /home/greenlight/setup/01.sh"
 
 # ==================================================================================== # 
 # QUALITY CONTROL
@@ -92,10 +97,18 @@ build/api:
 
 # ./bin/api -port=4040 -db-dsn="postgres://greenlight:0001@localhost/greenlight?sslmode=disable"
 
-# кемп
-# взять зону ответственности, разгрузить
 
-# мероприятия
+# ==================================================================================== # 
+# PRODUCTION
+# ==================================================================================== #
 
-# команда должна быть прокачена в плане должен быть прогрес
-# у каждого будет своя зона ответственности
+## production/connect: connect to the production server
+.PHONY: production/connect 
+production/connect:
+	ssh greenlight@${production_host_ip}
+
+## production/deploy/api: deploy the api to production
+.PHONY: production/deploy/api 
+production/deploy/api:
+	rsync -rP --delete ./bin/linux_amd64/api ./migrations greenlight@${production_host_ip}:~
+	ssh -t greenlight@${production_host_ip} 'migrate -path ~/migrations -database $$GREENLIGHT_DB_DSN up'

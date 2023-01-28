@@ -1,5 +1,5 @@
-include .envrc
-production_host_ip = '164.92.73.189'
+include .env
+
 
 # ==================================================================================== # 
 # HELPERS
@@ -20,11 +20,15 @@ confirm:
 # ==================================================================================== # 
 # DEVELOPMENT
 # ==================================================================================== #
+.PHONY: dev
+dev:
+	go build -ldflags=${linker_flags} -o='./bin/api' ./cmd/api
+	./bin/api -db-dsn=${GREENLIGHT_DB_DSN}
 
-## run/api: run the cmd/api application
+## run/api: run the bin/api application
 .PHONY: run/api
 run/api:
-	go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN}
+	./bin/api -db-dsn=${GREENLIGHT_DB_DSN}
 
 ## db/psql: connect to the database using psql
 .PHONY: db/psql
@@ -75,10 +79,6 @@ vendor:
 	go mod vendor
 
 
-.PHONY: clean
-clean:
-	go clean -modcache
-
 # ==================================================================================== # 
 # BUILD
 # ==================================================================================== #
@@ -86,14 +86,14 @@ clean:
 # current_time = $(shell date --iso-8601=seconds) for linux shell apparently
 current_time = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 git_description = $(shell git describe --always --dirty --tags --long)
-linker_flags = '-s -X main.buildTime=${current_time} -X main.version=${git_description}'
+linker_flags = '-s -X main.version=${git_description} -X main.buildTime=${current_time}'
 
 ## build/api: build the cmd/api application
 .PHONY: build/api 
 build/api:
 	@echo 'Building cmd/api...'
 	go build -ldflags=${linker_flags} -o='./bin/api' ./cmd/api
-	GOOS=linux GOARCH=amd64 go build -ldflags='-s -X main.buildTime=${current_time}' -o='./bin/linux_amd64/api' ./cmd/api
+	GOOS=linux GOARCH=amd64 go build -ldflags=${linker_flags} -o='./bin/linux_amd64/api' ./cmd/api
 
 # ./bin/api -port=4040 -db-dsn="postgres://greenlight:0001@localhost/greenlight?sslmode=disable"
 
@@ -101,6 +101,8 @@ build/api:
 # ==================================================================================== # 
 # PRODUCTION
 # ==================================================================================== #
+
+production_host_ip = '164.92.73.189'
 
 ## production/connect: connect to the production server
 .PHONY: production/connect 
@@ -112,3 +114,23 @@ production/connect:
 production/deploy/api:
 	rsync -rP --delete ./bin/linux_amd64/api ./migrations greenlight@${production_host_ip}:~
 	ssh -t greenlight@${production_host_ip} 'migrate -path ~/migrations -database $$GREENLIGHT_DB_DSN up'
+
+## production/configure/api.service: configure the production systemd api.service file
+.PHONY: production/configure/api.service 
+production/configure/api.service:
+	rsync -P ./remote/production/api.service greenlight@${production_host_ip}:~ 
+	ssh -t greenlight@${production_host_ip} '\
+		sudo mv ~/api.service /etc/systemd/system/ \
+		&& sudo systemctl enable api \
+		&& sudo systemctl restart api \
+	'
+
+
+## production/configure/caddyfile: configure the production Caddyfile
+.PHONY: production/configure/caddyfile 
+production/configure/caddyfile:
+	rsync -P ./remote/production/Caddyfile greenlight@${production_host_ip}:~ 
+		ssh -t greenlight@${production_host_ip} '\
+		sudo mv ~/Caddyfile /etc/caddy/ \
+		&& sudo systemctl reload caddy \
+	'

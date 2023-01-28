@@ -13,21 +13,23 @@ import (
 	"sync"
 	"time"
 
+	"greenlight/internal/data"
+	"greenlight/internal/jsonlog"
+	"greenlight/internal/mailer"
+
+	_ "github.com/joho/godotenv/autoload"
+
 	_ "github.com/lib/pq"
-	"greenlight.alexedwards.net/internal/data"
-	"greenlight.alexedwards.net/internal/jsonlog"
-	"greenlight.alexedwards.net/internal/mailer"
 )
 
-// Declare a string containing the application version number. Later in the book we'll
-// generate this automatically at build time, but for now we'll just store the version
-// number as a hard-coded global constant.
 var (
 	version   string
 	buildTime string
 )
 
-// Define a config struct to hold all the configuration settings for our application. // For now, the only configuration settings will be the network port that we want the // server to listen on, and the name of the current operating environment for the
+// Define a config struct to hold all the configuration settings for our application.
+// For now, the only configuration settings will be the network port that we want the
+// server to listen on, and the name of the current operating environment for the
 // application (development, staging, production, etc.). We will read in these
 // configuration settings from command-line flags when the application starts.
 type config struct {
@@ -67,10 +69,8 @@ type application struct {
 }
 
 func main() {
-	// Declare an instance of the config struct. var cfg config
-	// Read the value of the port and env command-line flags into the config struct. We // default to using the port number 4000 and the environment "development" if no
-	// corresponding flags are provided.
 	var cfg config
+
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
@@ -99,6 +99,7 @@ func main() {
 	displayVersion := flag.Bool("version", false, "Display version, build time and exit")
 
 	flag.Parse()
+	expvar.NewString("version").Set(version)
 
 	if *displayVersion {
 		fmt.Printf("Version:\t%s\n", version)
@@ -115,8 +116,6 @@ func main() {
 	defer db.Close()
 
 	logger.PrintInfo("database connection pool established", nil)
-
-	expvar.NewString("version").Set(version)
 
 	// Publish the number of active goroutines.
 	expvar.Publish("goroutines", expvar.Func(func() interface{} {

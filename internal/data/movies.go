@@ -8,8 +8,9 @@ import (
 	"fmt"
 	"time"
 
+	"greenlight/internal/validator"
+
 	"github.com/lib/pq"
-	"greenlight.alexedwards.net/internal/validator"
 )
 
 type MovieModel struct {
@@ -103,13 +104,11 @@ func (m Movie) EmbededMarshalJSON() ([]byte, error) {
 // VALUES ($1, $2, $3, $4)
 // RETURNING id, created_at, version
 func (m MovieModel) Insert(movie *Movie) error {
-
 	query := `
 			INSERT INTO movies (title, year, runtime, genres) 
 			VALUES ($1, $2, $3, $4)
 			RETURNING id, created_at, version
 		`
-
 	// IMPORTANT:
 	// Behind the scenes, the pq.Array() adapter takes our []string slice and converts
 	// it to a pq.StringArray type. In turn, the pq.StringArray type implements the driver.Valuer
@@ -130,9 +129,6 @@ func (m MovieModel) Insert(movie *Movie) error {
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
-// SELECT id, created_at, title, year, runtime, genres, version
-// FROM movies
-// WHERE id = $1
 func (m MovieModel) Get(id int64) (*Movie, error) {
 	// The PostgreSQL bigserial type that we're using for the movie ID starts
 	// auto-incrementing at 1 by default, so we know that no movies will have ID values
@@ -159,6 +155,7 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+
 	// Execute the query using the QueryRow() method, passing in the provided id value
 	// as a placeholder parameter, and scan the response data into the fields of the
 	// Movie struct. Importantly, notice that we need to convert the scan target for the

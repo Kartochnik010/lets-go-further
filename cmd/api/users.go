@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"time"
 
-	"greenlight.alexedwards.net/internal/data"
-	"greenlight.alexedwards.net/internal/validator"
+	"greenlight/internal/data"
+	"greenlight/internal/validator"
 )
 
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
-	// Create
-
 	var input struct {
 		Name     string `json:"name"`
 		Email    string `json:"email"`
@@ -86,6 +84,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		// Send the welcome email, passing in the map above as dynamic data.
 		err = app.mailer.Send(user.Email, "user_welcome.tmpl", data)
 		if err != nil {
+			app.models.Users.DeleteUserByEmail(user.Email)
 			app.logger.PrintError(err, nil)
 		}
 	})
@@ -111,9 +110,9 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Retrieve the details of the user associated with the token using the
-	// GetForToken() method (which we will create in a minute). If no matching record
-	// is found, then we let the client know that the token they provided is not valid.
+
+	// Retrieve the user associated with the token
+	// If no matching record is found, then the tokenis not valid.
 	user, err := app.models.Users.GetForToken(data.ScopeActivation, input.TokenPlaintext)
 	if err != nil {
 		switch {
@@ -147,6 +146,57 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"user": user}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) getAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+	// // read token to know who is knocking
+	// var input struct {
+	// 	TokenPlaintext string `json:"token"`
+	// }
+	// err := app.readJSON(w, r, &input)
+	// if err != nil {
+	// 	app.badRequestResponse(w, r, err)
+	// 	return
+	// }
+	// // validate the token
+	// v := validator.New()
+	// if data.ValidateTokenPlaintext(v, input.TokenPlaintext); !v.Valid() {
+	// 	app.failedValidationResponse(w, r, v.Errors)
+	// 	return
+	// }
+
+	users, err := app.models.Users.GetAllUsers()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"users": users}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	err = app.models.Users.DeleteUserByEmail(input.Email)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": input.Email + " successfully deleted!"}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"greenlight.alexedwards.net/internal/data"
+	"greenlight/internal/data"
 )
 
 // Define a custom contextKey type, with the underlying type string.

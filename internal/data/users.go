@@ -7,8 +7,9 @@ import (
 	"errors"
 	"time"
 
+	"greenlight/internal/validator"
+
 	"golang.org/x/crypto/bcrypt"
-	"greenlight.alexedwards.net/internal/validator"
 )
 
 var (
@@ -23,20 +24,6 @@ func (u *User) IsAnonymous() bool {
 	return u == AnonymousUser
 }
 
-// So here we’ve created a new AnonymousUser variable, which holds a pointer to a User struct
-// representing an inactivated user with no ID, name, email or password .
-// We’ve also implemented an IsAnonymous() method on the User struct, so whenever we have a User
-// instance we can easily check whether it is the AnonymousUser instance or not. For example:
-
-// data.AnonymousUser.IsAnonymous() // → Returns true
-
-// otherUser := &data.User{}
-// otherUser.IsAnonymous() // → Returns false
-
-// Define a User struct to represent an individual user. Importantly, notice how we are
-// using the json:"-" struct tag to prevent the Password and Version fields appearing in
-// any output when we encode it to JSON. Also notice that the Password field uses the
-// custom password type defined below.
 type User struct {
 	ID        int64     `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
@@ -169,6 +156,62 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		}
 	}
 	return &user, nil
+}
+
+func (m UserModel) DeleteUserByEmail(email string) error {
+	query := `
+		DELETE 
+		FROM users 
+		WHERE email = $1;
+	`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return m.DB.QueryRowContext(ctx, query, email).Err()
+
+}
+
+func (m UserModel) GetAllUsers() ([]User, error) {
+	query := `
+		SELECT 
+			id, 
+			created_at, 
+			name, 
+			email, 
+			password_hash, 
+			activated, 
+			version 
+		FROM users
+	`
+
+	var users []User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	for rows.Next() {
+		var user User
+		if err = rows.Scan(
+			&user.ID,
+			&user.CreatedAt,
+			&user.Name,
+			&user.Email,
+			&user.Password.hash,
+			&user.Activated,
+			&user.Version,
+		); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
 }
 
 // Update the details for a specific user. Notice that we check against the version

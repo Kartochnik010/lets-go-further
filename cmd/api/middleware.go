@@ -10,11 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"greenlight/internal/validator"
+
+	"greenlight/internal/data"
+
 	"github.com/felixge/httpsnoop"
 	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
-	"greenlight.alexedwards.net/internal/data"
-	"greenlight.alexedwards.net/internal/validator"
 )
 
 func (app *application) recoverPanic(next http.Handler) http.Handler {

@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"greenlight/internal/validator"
+
 	"github.com/julienschmidt/httprouter"
-	"greenlight.alexedwards.net/internal/validator"
 )
 
 // Retrieve the "id" URL parameter from the current request context, then convert it to // an integer and return it. If the operation isn't successful, return 0 and an error.
@@ -24,7 +25,7 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
-// Define an envelope type.
+// helps organise respones
 type envelope map[string]any
 
 // Change the data parameter to have the type envelope instead of any.

@@ -8,7 +8,7 @@ import (
 	"encoding/base32"
 	"time"
 
-	"greenlight.alexedwards.net/internal/validator"
+	"greenlight/internal/validator"
 )
 
 const (
@@ -27,9 +27,6 @@ type Token struct {
 }
 
 func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error) {
-	// Create a Token instance containing the user ID, expiry, and scope information.
-	// Notice that we add the provided ttl (time-to-live) duration parameter to the
-	// current time to get the expiry time?
 	token := &Token{
 		UserID: userID,
 		Expiry: time.Now().Add(ttl),
@@ -79,7 +76,9 @@ func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, 
 	if err != nil {
 		return nil, err
 	}
-	err = m.Insert(token)
+	if err = m.Insert(token); err != nil {
+		return nil, err
+	}
 	return token, err
 }
 

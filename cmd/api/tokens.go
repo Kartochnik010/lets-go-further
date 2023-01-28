@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"greenlight.alexedwards.net/internal/data"
-	"greenlight.alexedwards.net/internal/validator"
+	"greenlight/internal/data"
+	"greenlight/internal/validator"
 )
 
 func (app *application) createAuthenticationTokenHandler(w http.ResponseWriter, r *http.Request) { // Parse the email and password from the request body.

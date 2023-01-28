@@ -1,0 +1,11 @@
+{
+	email ilyas.amantaev@gmail.com
+}
+
+
+http://164.92.73.189 { 
+	respond /debug/* "Not Permitted" 403
+	reverse_proxy localhost:4000
+}
+
+

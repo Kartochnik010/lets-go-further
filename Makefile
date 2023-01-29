@@ -45,7 +45,7 @@ db/migrations/new:
 .PHONY: db/migrations/up
 db/migrations/up: confirm
 	@echo 'Running up migrations...'
-	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up
+	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up ${v}
 
 ## update/config: connect to the production server
 .PHONY: update/config 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"expvar"
+	"greenlight/internal/ui"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -26,6 +27,7 @@ func (app *application) routes() http.Handler {
 	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write", app.updateMovieHandler))
 	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", app.deleteMovieHandler))
 
+	// set requirements
 	router.HandlerFunc(http.MethodGet, "/v1/users", app.getAllUsersHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/users", app.deleteUserHandler)
 
@@ -34,7 +36,14 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
+	// static file server
+	router.Handler(http.MethodGet, "/templates/static/", http.FileServer(http.Dir("/static")))
+
 	router.Handler(http.MethodGet, "/debug/vars", app.metrics(expvar.Handler()))
+	// tests
+	router.HandlerFunc(http.MethodPost, "/test/readJSON", app.testReadJSON)
+	router.HandlerFunc(http.MethodGet, "/test/home", ui.HTML("home"))
+	router.HandlerFunc(http.MethodGet, "/test/registration", ui.HTML("registration"))
 
 	return app.recoverPanic(app.enableCORS(app.rateLimit3(app.authenticate(router))))
 }

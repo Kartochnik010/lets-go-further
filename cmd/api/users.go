@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"greenlight/internal/data"
+	"greenlight/internal/ui"
 	"greenlight/internal/validator"
 )
 
@@ -59,7 +60,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// Add the "movies:read" permission for the new user.
-	err = app.models.Permissions.AddForUser(user.ID, "movies:read")
+	err = app.models.Permissions.GrantPermission(user.ID, "movies:read")
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -88,10 +89,13 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 			app.logger.PrintError(err, nil)
 		}
 	})
-	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-	}
+
+	ui.HTML("home")(w, r)
+
+	// err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
+	// if err != nil {
+	// 	app.serverErrorResponse(w, r, err)
+	// }
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -197,6 +201,44 @@ func (app *application) deleteUserHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"user": input.Email + " successfully deleted!"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) grantUserPermissionHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Permissions []string
+		ID          int64 `json:"id"`
+	}
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	err = app.models.Permissions.GrantPermission(input.ID, input.Permissions...)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": input.Permissions}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
+
+func (app *application) testReadJSON(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		StrSlice  []string `json:"StrSlice"`
+		IntSlice  []int    `json:"intSlice"`
+		BoolSlice []bool   `json:"BoolSlice"`
+	}
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+	err = app.writeJSON(w, http.StatusOK, envelope{"user": input}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

@@ -220,11 +220,27 @@ func (m UserModel) GetAllUsers() ([]User, error) {
 // constraint when performing the update, just like we did when inserting the user
 // record originally.
 func (m UserModel) Update(user *User) error {
-	query := ` UPDATE users
-	SET name = $1, email = $2, password_hash = $3, activated = $4, version = version + 1 WHERE id = $5 AND version = $6
-	RETURNING version`
-	args := []interface{}{user.Name,
-		user.Email, user.Password.hash, user.Activated, user.ID, user.Version,
+	query := ` 
+		UPDATE 
+			users
+		SET 
+			name = $1, 
+			email = $2, 
+			password_hash = $3, 
+			activated = $4, 
+			version = version + 1 
+		WHERE 
+			id = $5 AND version = $6
+		RETURNING 
+			version
+	`
+	args := []interface{}{
+		user.Name,
+		user.Email,
+		user.Password.hash,
+		user.Activated,
+		user.ID,
+		user.Version,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()

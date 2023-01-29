@@ -44,6 +44,7 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 	`
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+
 	rows, err := m.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -76,7 +77,7 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 // WHERE users.email = 'grace@example.com';
 // ----------------------------------------------------------------
 
-func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
+func (m PermissionModel) GrantPermission(userID int64, codes ...string) error {
 	query := `
 		INSERT INTO users_permissions
 		SELECT $1, permissions.id 
